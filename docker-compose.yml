@@ -1,0 +1,50 @@
+version: '3'
+
+services:
+  mysql:
+    image: mysql:8
+    volumes:
+      - ./data:/var/lib/mysql
+    env_file: .env
+    networks:
+      - stlloft-net
+    expose:
+      - '3306'
+    restart: unless-stopped
+
+  wordpress:
+    image: wordpress:php7.4-fpm
+    volumes:
+      - ./wp:/var/www/html
+    env_file: .env
+    environment:
+      - WORDPRESS_DB_HOST=mysql
+      - WORDPRESS_DB_USER=$MYSQL_USER
+      - WORDPRESS_DB_PASSWORD=$MYSQL_PASSWORD
+      - WORDPRESS_DB_NAME=$MYSQL_DATABASE
+    depends_on:
+      - mysql
+    networks:
+      - stlloft-net
+    expose:
+      - '9000'
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:stable-alpine
+    volumes:
+      - ./etc/nginx:/etc/nginx/conf.d
+      - ./etc/ssl:/etc/ssl
+      - ./wp:/var/www/html
+    depends_on:
+      - wordpress
+    networks:
+      - stlloft-net
+    ports:
+      - '80:80'
+      - '443:443'
+    restart: unless-stopped
+
+networks:
+  stlloft-net:
+    driver: bridge
